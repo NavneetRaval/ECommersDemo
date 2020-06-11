@@ -1,0 +1,283 @@
+﻿
+@{
+    ViewBag.Title = "Index";
+}
+
+<style>
+    input.text-danger {
+        border-color: #a94442;
+    }
+
+    select.text-danger {
+        border-color: #a94442;
+    }
+</style>
+<div class="btn-group btn-group-justified" style="padding-bottom: 5px;padding-top: 5px;">
+    @Html.ActionLink("Product List", "Index", "Product", new { area = "" }, new { @class = "btn btn-info" })
+    @Html.ActionLink("Product Category List", "Index", "ProductCategory", new { area = "" }, new { @class = "btn btn-info" })
+    @Html.ActionLink("Product Attribute List", "Index", "ProductAttribute", new { area = "" }, new { @class = "btn btn-info" })
+</div>
+<div class="panel panel-primary">
+    <div class="panel-heading">Product List</div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-12">
+                <a id="btnNewProduct" href="Javascript:;" class="btn btn-primary" style="float: right; margin-bottom: 5px; ">New Product</a>
+            </div>
+        </div>
+        <table class="table table-bordered table-hover" id="tblProduct">
+            <thead>
+                <tr>
+                    <th>#ProductId</th>
+                    <th>Product Name</th>
+                    <th>Product Category</th>
+                    <th>ProdDescription</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+</div>
+
+<div id="Product_model" class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><b>Product Form</b></h5>
+
+            </div>
+            <div class="modal-body">
+                <div id="alertBox" class="custom-alerts alert alert-danger" style="display:none;">
+                    <button type="button" class="close" data-hide="alert" aria-hidden="true"></button>
+                    <span></span>
+                </div>
+                <br />
+                <div id="partial_body">
+
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btnSave" type="button" class="btn btn-primary">Save</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts
+{
+    <link href="~/Content/dataTables.bootstrap.min.css" rel="stylesheet" />
+    <script src="~/Scripts/jquery.dataTables.min.js"></script>
+    <script src="~/Scripts/dataTables.bootstrap.min.js"></script>
+    <script src="~/Scripts/jquery.validate.min.js"></script>
+    <script>
+
+        function GetProductForm(id) {
+                $.ajax({
+                    url: '@Url.Action("ProductFormPartialView", "Product")',
+                    type: 'GET',
+                    data: {id : id},
+                    success: function (response) {
+                        $("#Product_model .modal-body #partial_body").html(response);
+                        Init();
+                        $("#Product_model").modal({
+                            backdrop: 'static'
+                        });
+                    }
+                });
+            }
+
+        function SaveProductData(data) {
+                $.ajax({
+                    url: '@Url.Action("SaveProduct", "Product")',
+                    type: 'POST',
+                    data: data,
+                    success: function (response) {
+                        if (response.responseStatus) {
+                            alert("Data saved successfully.");
+                            location.reload();
+                        } else {
+                            var d = document.createElement("ul");
+                            for (var i = 0; i < response.messages.length; i++) {
+                                $(d).css("margin-bottom", "0px").append($(document.createElement("li")).append(response.messages[i]));
+                            }
+                            $("#alertBox span").html(d.outerHTML);
+                            $("#alertBox").show();
+                            $(window).scrollTop($('#alertBox').position().top);
+                        }
+                    },
+                    error: function (XMLHttpRequest, textStatus, errorThrown) {
+                        if (XMLHttpRequest.status == 0) {
+                            alert(' Check Your Network.');
+                        } else if (XMLHttpRequest.status == 404) {
+                            alert('Requested URL not found.');
+                        } else if (XMLHttpRequest.status == 500) {
+                            alert('Internel Server Error.');
+                        } else {
+                            alert('Unknow Error.\n' + XMLHttpRequest.responseText);
+                        }
+                    }
+                })
+            }
+
+       
+
+        function Init() {
+            $("[data-hide]").on("click", function () {
+                $(this).closest("." + $(this).attr("data-hide")).hide();
+            });
+
+            $("#ProdCatId").change(function () {
+                debugger;
+                $("#Product_model .modal-body #categoryAttribute").html("");
+                if ($(this).val() != "") {
+                    $.ajax({
+                    url: '@Url.Action("GetProductAttributeViewByCategoryId", "Product")',
+                    type: 'GET',
+                    data: { id: $(this).val()},
+                    success: function (response) {
+                        $("#Product_model .modal-body #categoryAttribute").html(response);
+                    }
+                });
+                }
+            });
+
+            $("#ProductForm").validate({
+                ignore: [],
+                errorElement: "span",
+                errorClass: "text-danger",
+                rules: {
+                    ProdName: { required: true, maxlength: 250 },
+                    CategoryName: "required",
+                    ProdDescription: { required: true, maxlength: 8000 }
+                    
+                },
+                // Specify validation error messages
+                messages: {
+                    ProdName: {
+                        required: "Name field is required.",
+                        maxlength: "Name field maximum length is 250 characters."
+                    },
+                   
+                    CategoryName: "Please select Course",
+                    ProdDescription: {
+                        required: "please product description is required.",
+                        maxlength: "Product description maximum length is 8000 characters"
+                    }
+                },
+                errorPlacement: function (error, element) {
+                    $(element).parent().append(error);
+                },
+                onkeyup: function (element, event) {
+                    if (event.which === 9 && this.elementValue(element) === "") {
+                        return;
+                    } else {
+                        this.element(element);
+                    }
+                },
+                onfocusout: function (element, event) {
+                    if (event.which === 9 && this.elementValue(element) === "") {
+                        return;
+                    } else {
+                        this.element(element);
+                    }
+                },
+                onchange: function (element, event) {
+                    if (event.which === 9 && this.elementValue(element) === "") {
+                        return;
+                    } else {
+                        this.element(element);
+                    }
+                }
+            });
+        }
+        var my_dataTable;
+        $(document).ready(function () {
+
+             my_dataTable = $('#tblProduct').DataTable({
+                "processing": true,
+                "serverSide": true,
+                "responsive": true,
+                "lengthMenu": [5,10,15,20,50,100],
+                "aaSorting": [[0, 'desc']],
+                "language": {
+                        "emptyTable": "No record found.",
+                        "processing":
+                            '<span class="sr-only">Loading...</span> '
+                },
+                "sAjaxSource": '@Url.Action("GetProducts", "Product")',
+                "aoColumns": [
+                    { "sName": "ProductId" },
+                    { "sName": "ProdName" },
+                    { "sName": "CategoryName" },
+                    { "sName": "ProdDescription" },
+                    {
+                        "sName": "Action",
+                        "bSearchable": false,
+                        "bSortable": false,
+                        //this is to render custom content in the column
+                        "mRender": function (oObj, full, row) {
+                            //debugger;
+                            var row_button = '<a data-val="' + row[0] +'" class="btn btn-primary btnEdit" href="Javascript:;" style="margin-right: 3px;">Edit</i></a>' +
+                                '<a class="btn btn-danger btnDelete" data-val="' + row[0] +'" ">Delete</i></a>';
+                            return row_button;
+                        }
+                    }
+                ],
+                "fnServerData": function (sSource, aoData, fnCallback) {
+                    $.getJSON(sSource, aoData, function (json) {
+                        fnCallback(json);
+                    });
+                },
+                "rowCallback": function (row, data, index) {
+                   
+                }
+            });
+
+            $("#btnNewProduct").click(function () {
+                GetProductForm(null);
+            })
+
+            $("#btnSave").click(function () {
+                var ProductForm = $("#ProductForm");
+                ProductForm.validate();
+                if (ProductForm.valid()) {
+                   
+                        SaveProductData(ProductForm.serializeArray());
+                    
+                }
+            });
+            function DeleteProductData(data) {
+
+               $.ajax({
+                    url: '@Url.Action("Delete", "Product")',
+                    type: 'GET',
+                   data: { id: data},
+                    success: function (response) {
+                       // my_dataTable.ajax.reload();
+
+                    }
+                });
+            }
+            $('#tblProduct tbody').on('click', 'tr td .btnDelete', function () {
+                if (confirm("Are you sure want to delete this data ?")) {
+                    var id = $(this).attr("data-val");
+                    DeleteProductData(id);
+                    my_dataTable.ajax.reload()
+                    return true;
+                }
+                return false;
+            });
+
+            $('#tblProduct tbody').on('click', 'tr td .btnEdit', function () {
+                var id = $(this).attr("data-val");
+                GetProductForm(id);
+            });
+
+        });
+
+    </script>
+
+}
